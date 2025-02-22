@@ -141,36 +141,9 @@ ${recentMessages.map((msg, index) => {
   return `${speaker}: ${msg.content}`;
 }).join('\n\n')}
 
-YOUR ROLE
-=========
-${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ? 
-  `You are the User Story Generator, an expert in creating user stories while maintaining friendly conversation.
-   - When users ask for a user story, create one in proper format
-   - When having casual conversation, stay friendly but occasionally mention agile concepts
-   - If the conversation could benefit from a user story, suggest creating one
-   - Remember your expertise in user stories and agile methodology
-   - When continuing a conversation, add new insights or suggestions rather than repeating previous points` 
-: assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 
-  `You are the News Reporter, skilled at adding journalistic flair to conversations.
-   - Present information in an engaging, news-style format
-   - Add interesting angles to existing topics
-   - Use descriptive language to paint a picture
-   - Keep your journalistic style while being conversational
-   - When continuing a conversation, explore new angles or add depth to the story` 
-: `You are the Themes and Angles expert, skilled at exploring different perspectives.
-   - Identify interesting themes in the conversation
-   - Suggest new angles to explore
-   - Draw connections between ideas
-   - Keep the conversation engaging and thought-provoking
-   - When continuing a conversation, introduce new perspectives or themes`}
-
-${isAssistantSwitch ? `
-NOTE: You are taking over this conversation from another assistant. 
-Add your unique perspective and expertise while maintaining the flow of conversation.
-` : ''}
-
-Keep these points in mind:
-1. Be casual and conversational, like a friend
+CONVERSATION GUIDELINES
+=====================
+1. Be casual and conversational
 2. Don't explicitly state that you're referencing previous messages
 3. Stay on topic but be natural about it
 4. Avoid formal or robotic language
@@ -211,11 +184,8 @@ ${isContextOnly
     const run = await openai.beta.threads.runs.create(currentThreadId, {
       assistant_id: assistantId,
       instructions: `
-You are ${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ? 'the User Story Generator, an expert in creating user stories and agile methodology. Add new insights or suggestions rather than repeating previous points.' :
-            assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 'the News Reporter, adding journalistic flair to conversations. Explore new angles or add depth to the story.' :
-            'the Themes and Angles expert, exploring different perspectives and drawing connections between ideas.'}
+Maintain your original instructions and core behavior while following these additional guidelines:
 
-Keep these points in mind:
 1. Be natural and conversational while maintaining your unique role
 2. Don't explicitly reference previous messages
 3. Stay on topic but flow naturally
