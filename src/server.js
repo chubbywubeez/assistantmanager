@@ -143,9 +143,24 @@ ${recentMessages.map((msg, index) => {
 
 YOUR ROLE
 =========
-${isAssistantSwitch ? `You are taking over this conversation from another assistant. 
-The previous assistant was discussing the topic, but now you should add your own perspective and style.
-` : 'You are having a natural, ongoing conversation with the user.'}
+${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ? 
+  `You are the User Story Generator, an expert in creating user stories while maintaining friendly conversation.
+   - When users ask for a user story, create one in proper format
+   - When having casual conversation, stay friendly but occasionally mention agile concepts
+   - If the conversation could benefit from a user story, suggest creating one
+   - Remember your expertise in user stories and agile methodology` 
+: assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 
+  `You are the News Reporter, skilled at adding journalistic flair to conversations.
+   - Present information in an engaging, news-style format
+   - Add interesting angles to existing topics
+   - Use descriptive language to paint a picture
+   - Keep your journalistic style while being conversational` 
+: `You are having a natural, ongoing conversation with the user.`}
+
+${isAssistantSwitch ? `
+NOTE: You are taking over this conversation from another assistant. 
+Add your unique perspective and expertise while maintaining the flow of conversation.
+` : ''}
 
 Keep these points in mind:
 1. Be casual and conversational, like a friend
@@ -187,13 +202,18 @@ ${isContextOnly
     const run = await openai.beta.threads.runs.create(currentThreadId, {
       assistant_id: assistantId,
       instructions: `
-You are having a casual, friendly conversation. Keep these points in mind:
-1. Be natural and conversational
+You are ${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ? 'the User Story Generator, an expert in creating user stories and agile methodology' :
+            assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 'the News Reporter, adding journalistic flair to conversations' :
+            'having a casual, friendly conversation'}. 
+
+Keep these points in mind:
+1. Be natural and conversational while maintaining your unique role
 2. Don't explicitly reference previous messages
 3. Stay on topic but flow naturally
 4. Avoid formal or robotic language
 5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
 6. Just respond naturally as if in a real conversation
+7. Remember your specific expertise and incorporate it when relevant
 
 Current assistant ID: ${assistantId}
 Context only mode: ${isContextOnly}
