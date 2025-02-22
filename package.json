@@ -7,15 +7,21 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.11.0",
     "@mui/material": "^5.11.0",
+    "@mui/x-data-grid": "^7.27.0",
+    "@mui/x-data-grid-pro": "^7.27.0",
     "axios": "^1.6.0",
+    "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "openai": "^4.20.1",
+    "pg": "^8.13.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^8.0.7",
-    "react-scripts": "5.0.1"
+    "react-scripts": "5.0.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "scripts": {
     "start": "react-scripts start",

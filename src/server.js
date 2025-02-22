@@ -3,7 +3,6 @@ const OpenAI = require('openai');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
-const db = require('./db');
 require('dotenv').config();
 
 const app = express();
@@ -71,28 +70,9 @@ setInterval(async () => {
   }
 }, 60 * 60 * 1000); // Check every hour
 
-// Add this near the top after imports
-let server;
-
-// Move the health check endpoint to the top of the routes
+// Add a basic health check endpoint
 app.get('/health', (req, res) => {
-  // Check database connection
-  pool.query('SELECT 1')
-    .then(() => {
-      res.json({ 
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        database: 'connected',
-        uptime: process.uptime()
-      });
-    })
-    .catch(err => {
-      console.error('Health check failed:', err);
-      res.status(503).json({ 
-        status: 'error',
-        error: 'Database connection failed'
-      });
-    });
+  res.json({ status: 'ok' });
 });
 
 // Get assistant names
@@ -226,131 +206,17 @@ async function waitForRunCompletion(threadId, runId) {
   return runStatus;
 }
 
-// Like a message
-app.post('/api/likes', async (req, res) => {
-  try {
-    const { message, assistantId, assistantName, context, tags } = req.body;
-    const result = await db.likeMessage(message, assistantId, assistantName, context, tags);
-    res.json(result);
-  } catch (error) {
-    console.error('Error liking message:', error);
-    res.status(500).json({ error: 'Failed to like message' });
-  }
-});
-
-// Get all liked messages
-app.get('/api/likes', async (req, res) => {
-  try {
-    const messages = await db.getLikedMessages();
-    res.json(messages);
-  } catch (error) {
-    console.error('Error getting liked messages:', error);
-    res.status(500).json({ error: 'Failed to get liked messages' });
-  }
-});
-
-// Get liked messages by assistant
-app.get('/api/likes/assistant/:assistantId', async (req, res) => {
-  try {
-    const messages = await db.getLikedMessagesByAssistant(req.params.assistantId);
-    res.json(messages);
-  } catch (error) {
-    console.error('Error getting liked messages by assistant:', error);
-    res.status(500).json({ error: 'Failed to get liked messages' });
-  }
-});
-
-// Search liked messages
-app.get('/api/likes/search', async (req, res) => {
-  try {
-    const { q } = req.query;
-    if (!q) {
-      return res.status(400).json({ error: 'Search query is required' });
-    }
-    const messages = await db.searchLikedMessages(q);
-    res.json(messages);
-  } catch (error) {
-    console.error('Error searching liked messages:', error);
-    res.status(500).json({ error: 'Failed to search liked messages' });
-  }
-});
-
-// Update a liked message
-app.put('/api/likes/:id', async (req, res) => {
-  try {
-    const result = await db.updateLikedMessage(req.params.id, req.body);
-    if (!result) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Error updating message:', error);
-    res.status(500).json({ error: 'Failed to update message' });
-  }
-});
-
-// Delete a liked message
-app.delete('/api/likes/:id', async (req, res) => {
-  try {
-    const result = await db.deleteLikedMessage(req.params.id);
-    if (!result) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Error deleting message:', error);
-    res.status(500).json({ error: 'Failed to delete message' });
-  }
-});
-
 // Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../build', 'index.html'));
 });
 
-// Update the server initialization
 const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0';
-
-// Wrap server initialization in a function
-const startServer = async () => {
-  try {
-    // Initialize database tables first
-    await initializeTables();
-    
-    // Then start the server
-    server = app.listen(PORT, HOST, () => {
-      console.log(`Server is running on http://${HOST}:${PORT}`);
-      console.log(`Health check available at http://${HOST}:${PORT}/health`);
-    });
-
-    // Add error handler for the server
-    server.on('error', (err) => {
-      console.error('Server error:', err);
-      process.exit(1);
-    });
-
-  } catch (err) {
-    console.error('Failed to start server:', err);
-    process.exit(1);
-  }
-};
-
-// Start the server
-startServer();
-
-// Proper shutdown handling
-const shutdown = async () => {
-  console.log('Shutting down gracefully...');
-  if (server) {
-    await new Promise((resolve) => server.close(resolve));
-  }
-  await pool.end();
-  process.exit(0);
-};
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+});
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
