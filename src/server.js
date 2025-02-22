@@ -79,22 +79,20 @@ app.get('/health', (req, res) => {
 app.get('/api/assistants', async (req, res) => {
   try {
     console.log('Fetching assistants...');
-    const assistantIds = [
-      'asst_IKDRxcCVeSx55rtDbl9Gv2sU',
-      'asst_nMBoUm3KOLqMPwyHfnQB0hPr',
-      'asst_KpVt3IbaX91ccQw8jVexfXff'
-    ];
     
-    const assistants = await Promise.all(
-      assistantIds.map(async (id) => {
-        const assistant = await openai.beta.assistants.retrieve(id);
-        return {
-          id: assistant.id,
-          name: assistant.name || 'Unnamed Assistant'
-        };
-      })
-    );
+    // Fetch all assistants from OpenAI
+    const assistantsList = await openai.beta.assistants.list({
+      limit: 100, // Adjust this number if you have more assistants
+      order: 'desc'
+    });
 
+    // Map the assistants to the required format
+    const assistants = assistantsList.data.map(assistant => ({
+      id: assistant.id,
+      name: assistant.name || 'Unnamed Assistant'
+    }));
+
+    console.log('Found assistants:', assistants.length);
     res.json(assistants);
   } catch (error) {
     console.error('Error fetching assistants:', error);
