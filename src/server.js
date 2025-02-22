@@ -116,6 +116,10 @@ app.post('/api/chat', async (req, res) => {
 
     let currentThreadId = threadId;
 
+    // Check if we're switching assistants but have previous messages
+    const isAssistantSwitch = !threadId && previousMessages && previousMessages.length > 0 && 
+      previousMessages[previousMessages.length - 1].assistantId !== assistantId;
+
     // Create a new thread if none exists
     if (!currentThreadId) {
       const thread = await openai.beta.threads.create();
@@ -123,7 +127,8 @@ app.post('/api/chat', async (req, res) => {
 
       if (previousMessages && previousMessages.length > 0) {
         // Create a more natural conversation summary
-        const topics = previousMessages
+        const recentMessages = previousMessages.slice(-5); // Only use last 5 messages for context
+        const topics = recentMessages
           .filter(msg => msg.role === 'assistant')
           .map(msg => msg.content.substring(0, 100))
           .join('\n');
@@ -131,14 +136,18 @@ app.post('/api/chat', async (req, res) => {
         const conversationSummary = `
 CONVERSATION HISTORY
 ===================
-${previousMessages.map((msg, index) => {
-  const speaker = msg.role === 'user' ? 'Human' : 'Assistant';
+${recentMessages.map((msg, index) => {
+  const speaker = msg.role === 'user' ? 'Human' : msg.assistantId === assistantId ? 'You' : 'Previous Assistant';
   return `${speaker}: ${msg.content}`;
 }).join('\n\n')}
 
 YOUR ROLE
 =========
-You are a helpful, friendly AI assistant having a natural conversation. Keep these points in mind:
+${isAssistantSwitch ? `You are taking over this conversation from another assistant. 
+The previous assistant was discussing the topic, but now you should add your own perspective and style.
+` : 'You are having a natural, ongoing conversation with the user.'}
+
+Keep these points in mind:
 1. Be casual and conversational, like a friend
 2. Don't explicitly state that you're referencing previous messages
 3. Stay on topic but be natural about it
