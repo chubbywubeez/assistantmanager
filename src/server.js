@@ -3,6 +3,7 @@ const OpenAI = require('openai');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
+const db = require('./db');
 require('dotenv').config();
 
 const app = express();
@@ -205,6 +206,55 @@ async function waitForRunCompletion(threadId, runId) {
   
   return runStatus;
 }
+
+// Like a message
+app.post('/api/likes', async (req, res) => {
+  try {
+    const { message, assistantId, assistantName, context, tags } = req.body;
+    const result = await db.likeMessage(message, assistantId, assistantName, context, tags);
+    res.json(result);
+  } catch (error) {
+    console.error('Error liking message:', error);
+    res.status(500).json({ error: 'Failed to like message' });
+  }
+});
+
+// Get all liked messages
+app.get('/api/likes', async (req, res) => {
+  try {
+    const messages = await db.getLikedMessages();
+    res.json(messages);
+  } catch (error) {
+    console.error('Error getting liked messages:', error);
+    res.status(500).json({ error: 'Failed to get liked messages' });
+  }
+});
+
+// Get liked messages by assistant
+app.get('/api/likes/assistant/:assistantId', async (req, res) => {
+  try {
+    const messages = await db.getLikedMessagesByAssistant(req.params.assistantId);
+    res.json(messages);
+  } catch (error) {
+    console.error('Error getting liked messages by assistant:', error);
+    res.status(500).json({ error: 'Failed to get liked messages' });
+  }
+});
+
+// Search liked messages
+app.get('/api/likes/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+    const messages = await db.searchLikedMessages(q);
+    res.json(messages);
+  } catch (error) {
+    console.error('Error searching liked messages:', error);
+    res.status(500).json({ error: 'Failed to search liked messages' });
+  }
+});
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {

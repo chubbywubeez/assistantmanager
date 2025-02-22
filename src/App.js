@@ -10,9 +10,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Snackbar
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 
@@ -23,6 +27,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [threads, setThreads] = useState({});
   const [allMessages, setAllMessages] = useState([]);
+  const [likedMessages, setLikedMessages] = useState(new Set());
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [likeError, setLikeError] = useState(null);
+  const [isLiking, setIsLiking] = useState(false);
 
   useEffect(() => {
     // Fetch assistants when component mounts
@@ -44,6 +53,19 @@ function App() {
     };
 
     fetchAssistants();
+  }, []);
+
+  // Load liked messages on mount
+  useEffect(() => {
+    const loadLikedMessages = async () => {
+      try {
+        const response = await axios.get('/api/likes');
+        setLikedMessages(new Set(response.data.map(msg => msg.message_content)));
+      } catch (error) {
+        console.error('Error loading liked messages:', error);
+      }
+    };
+    loadLikedMessages();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -119,6 +141,35 @@ function App() {
   // Get all messages to display
   const currentMessages = allMessages;
 
+  const handleLike = async (message, assistantId, assistantName) => {
+    setIsLiking(true);
+    setLikeError(null);
+    try {
+      const response = await axios.post('/api/likes', {
+        message: message.content,
+        assistantId,
+        assistantName,
+        context: message.context || null,
+        tags: message.tags || []
+      });
+
+      if (!response.data.ok) {
+        throw new Error('Failed to like message');
+      }
+
+      const result = response.data.data;
+      // Update UI to show the message was liked
+      setLikedMessages(prev => new Set([...prev, message.content]));
+      setSnackbarMessage('Message saved to favorites!');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error liking message:', error);
+      setLikeError('Failed to like message. Please try again.');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom align="center">
@@ -143,7 +194,8 @@ function App() {
                   maxWidth: '70%',
                   backgroundColor: message.role === 'user' ? '#e3f2fd' : 
                                  message.role === 'error' ? '#ffebee' : '#f5f5f5',
-                  borderLeft: message.assistantId === selectedAssistant ? '4px solid #2196f3' : 'none'
+                  borderLeft: message.assistantId === selectedAssistant ? '4px solid #2196f3' : 'none',
+                  position: 'relative'
                 }}
               >
                 {message.assistantId !== selectedAssistant && (
@@ -154,15 +206,40 @@ function App() {
                 {message.role === 'user' ? (
                   <Typography>{message.content}</Typography>
                 ) : (
-                  <ReactMarkdown
-                    components={{
-                      p: ({node, ...props}) => <Typography {...props} paragraph />,
-                      h3: ({node, ...props}) => <Typography variant="h6" {...props} gutterBottom />,
-                      h4: ({node, ...props}) => <Typography variant="subtitle1" {...props} gutterBottom />,
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                  <>
+                    <ReactMarkdown
+                      components={{
+                        p: ({node, ...props}) => <Typography {...props} paragraph />,
+                        h3: ({node, ...props}) => <Typography variant="h6" {...props} gutterBottom />,
+                        h4: ({node, ...props}) => <Typography variant="subtitle1" {...props} gutterBottom />,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                    {message.role === 'assistant' && (
+                      <IconButton
+                        size="small"
+                        onClick={() => handleLike(message, message.assistantId, assistants.find(a => a.id === message.assistantId)?.name || 'Unknown Assistant')}
+                        sx={{ position: 'absolute', right: 8, bottom: 8 }}
+                        disabled={isLiking}
+                      >
+                        {isLiking ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          likedMessages.has(message.content) ? (
+                            <FavoriteIcon color="error" />
+                          ) : (
+                            <FavoriteBorderIcon />
+                          )
+                        )}
+                      </IconButton>
+                    )}
+                    {likeError && (
+                      <div className="error-message" style={{ color: 'red', marginTop: '8px' }}>
+                        {likeError}
+                      </div>
+                    )}
+                  </>
                 )}
               </Paper>
             </Box>
@@ -206,6 +283,13 @@ function App() {
           </Button>
         </form>
       </Paper>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+      />
     </Container>
   );
 }
