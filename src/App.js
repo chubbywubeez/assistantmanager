@@ -17,7 +17,6 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 
 function App() {
-  const [messages, setMessages] = useState({});
   const [input, setInput] = useState('');
   const [assistants, setAssistants] = useState([]);
   const [selectedAssistant, setSelectedAssistant] = useState('');
