@@ -122,49 +122,39 @@ app.post('/api/chat', async (req, res) => {
       currentThreadId = thread.id;
 
       if (previousMessages && previousMessages.length > 0) {
-        // Create a more structured conversation summary
+        // Create a more natural conversation summary
         const topics = previousMessages
           .filter(msg => msg.role === 'assistant')
           .map(msg => msg.content.substring(0, 100))
           .join('\n');
 
         const conversationSummary = `
-CONVERSATION CONTEXT
+CONVERSATION HISTORY
 ===================
-Previous Topics Discussed:
-${topics}
-
-Detailed Message History:
 ${previousMessages.map((msg, index) => {
-  const speaker = msg.role === 'user' ? 'Human' : `Assistant-${msg.assistantId}`;
-  return `[${index + 1}] ${speaker}:\n${msg.content}\n---`;
+  const speaker = msg.role === 'user' ? 'Human' : 'Assistant';
+  return `${speaker}: ${msg.content}`;
 }).join('\n\n')}
 
-INSTRUCTIONS FOR RESPONSE
-=======================
-1. You MUST explicitly acknowledge the previous conversation
-2. You MUST reference specific points made by other assistants
-3. You MUST maintain thematic consistency with the discussion
-4. You MUST explain how your response relates to previous messages
-
-Current Discussion Topic: ${previousMessages[0].content.substring(0, 100)}...
-
-YOUR TASK
+YOUR ROLE
 =========
+You are a helpful, friendly AI assistant having a natural conversation. Keep these points in mind:
+1. Be casual and conversational, like a friend
+2. Don't explicitly state that you're referencing previous messages
+3. Stay on topic but be natural about it
+4. Avoid formal or robotic language
+5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
+
+CURRENT CONTEXT
+==============
 ${isContextOnly 
-  ? 'Review the conversation above and continue the discussion, explicitly building on previous points.' 
-  : `Address this new message while maintaining conversation context: "${message}"`}`;
+  ? 'Continue the conversation naturally, building on what was discussed.' 
+  : `Respond to this message: "${message}"`}`;
 
         // First, add the context
         await openai.beta.threads.messages.create(currentThreadId, {
           role: "user",
           content: conversationSummary
-        });
-
-        // Add a system message to enforce context awareness
-        await openai.beta.threads.messages.create(currentThreadId, {
-          role: "user",
-          content: "Before providing your response, you must acknowledge the previous discussion and explain how your response relates to it."
         });
       }
     }
@@ -188,15 +178,15 @@ ${isContextOnly
     const run = await openai.beta.threads.runs.create(currentThreadId, {
       assistant_id: assistantId,
       instructions: `
-You are participating in an ongoing conversation. Before providing your response:
-1. Explicitly acknowledge the previous discussion
-2. Reference specific points made by other assistants
-3. Explain how your response builds on or relates to previous messages
-4. Maintain thematic consistency
-5. If changing topics, explain the connection
+You are having a casual, friendly conversation. Keep these points in mind:
+1. Be natural and conversational
+2. Don't explicitly reference previous messages
+3. Stay on topic but flow naturally
+4. Avoid formal or robotic language
+5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
+6. Just respond naturally as if in a real conversation
 
 Current assistant ID: ${assistantId}
-Previous messages count: ${previousMessages?.length || 0}
 Context only mode: ${isContextOnly}
 `
     });
