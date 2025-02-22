@@ -256,6 +256,34 @@ app.get('/api/likes/search', async (req, res) => {
   }
 });
 
+// Update a liked message
+app.put('/api/likes/:id', async (req, res) => {
+  try {
+    const result = await db.updateLikedMessage(req.params.id, req.body);
+    if (!result) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating message:', error);
+    res.status(500).json({ error: 'Failed to update message' });
+  }
+});
+
+// Delete a liked message
+app.delete('/api/likes/:id', async (req, res) => {
+  try {
+    const result = await db.deleteLikedMessage(req.params.id);
+    if (!result) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
 // Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../build', 'index.html'));

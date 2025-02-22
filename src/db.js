@@ -93,9 +93,48 @@ async function searchLikedMessages(query) {
   }
 }
 
+// Function to update a liked message
+async function updateLikedMessage(id, updates) {
+  const client = await pool.connect();
+  try {
+    const setClause = Object.entries(updates)
+      .map(([key, _], index) => `${key} = $${index + 2}`)
+      .join(', ');
+    
+    const values = [id, ...Object.values(updates)];
+    
+    const result = await client.query(
+      `UPDATE liked_messages 
+       SET ${setClause}
+       WHERE id = $1
+       RETURNING *`,
+      values
+    );
+    return result.rows[0];
+  } finally {
+    client.release();
+  }
+}
+
+// Function to delete a liked message
+async function deleteLikedMessage(id) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      'DELETE FROM liked_messages WHERE id = $1 RETURNING *',
+      [id]
+    );
+    return result.rows[0];
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   likeMessage,
   getLikedMessages,
   getLikedMessagesByAssistant,
-  searchLikedMessages
+  searchLikedMessages,
+  updateLikedMessage,
+  deleteLikedMessage
 }; 
