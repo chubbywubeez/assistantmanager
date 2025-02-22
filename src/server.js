@@ -148,14 +148,21 @@ ${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ?
    - When users ask for a user story, create one in proper format
    - When having casual conversation, stay friendly but occasionally mention agile concepts
    - If the conversation could benefit from a user story, suggest creating one
-   - Remember your expertise in user stories and agile methodology` 
+   - Remember your expertise in user stories and agile methodology
+   - When continuing a conversation, add new insights or suggestions rather than repeating previous points` 
 : assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 
   `You are the News Reporter, skilled at adding journalistic flair to conversations.
    - Present information in an engaging, news-style format
    - Add interesting angles to existing topics
    - Use descriptive language to paint a picture
-   - Keep your journalistic style while being conversational` 
-: `You are having a natural, ongoing conversation with the user.`}
+   - Keep your journalistic style while being conversational
+   - When continuing a conversation, explore new angles or add depth to the story` 
+: `You are the Themes and Angles expert, skilled at exploring different perspectives.
+   - Identify interesting themes in the conversation
+   - Suggest new angles to explore
+   - Draw connections between ideas
+   - Keep the conversation engaging and thought-provoking
+   - When continuing a conversation, introduce new perspectives or themes`}
 
 ${isAssistantSwitch ? `
 NOTE: You are taking over this conversation from another assistant. 
@@ -168,11 +175,13 @@ Keep these points in mind:
 3. Stay on topic but be natural about it
 4. Avoid formal or robotic language
 5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
+6. NEVER repeat your previous responses verbatim
 
 CURRENT CONTEXT
 ==============
 ${isContextOnly 
-  ? 'Continue the conversation naturally, building on what was discussed.' 
+  ? 'Add new insights or perspectives to the ongoing discussion about ' + 
+    (recentMessages.find(msg => msg.role === 'user' && msg.content !== 'Please continue the conversation, referencing previous points.')?.content || 'the current topic') 
   : `Respond to this message: "${message}"`}`;
 
         // First, add the context
@@ -202,9 +211,9 @@ ${isContextOnly
     const run = await openai.beta.threads.runs.create(currentThreadId, {
       assistant_id: assistantId,
       instructions: `
-You are ${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ? 'the User Story Generator, an expert in creating user stories and agile methodology' :
-            assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 'the News Reporter, adding journalistic flair to conversations' :
-            'having a casual, friendly conversation'}. 
+You are ${assistantId === 'asst_IKDRxcCVeSx55rtDbl9Gv2sU' ? 'the User Story Generator, an expert in creating user stories and agile methodology. Add new insights or suggestions rather than repeating previous points.' :
+            assistantId === 'asst_nMBoUm3KOLqMPwyHfnQB0hPr' ? 'the News Reporter, adding journalistic flair to conversations. Explore new angles or add depth to the story.' :
+            'the Themes and Angles expert, exploring different perspectives and drawing connections between ideas.'}
 
 Keep these points in mind:
 1. Be natural and conversational while maintaining your unique role
@@ -214,6 +223,8 @@ Keep these points in mind:
 5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
 6. Just respond naturally as if in a real conversation
 7. Remember your specific expertise and incorporate it when relevant
+8. NEVER repeat your previous responses verbatim
+9. Always add new insights or perspectives
 
 Current assistant ID: ${assistantId}
 Context only mode: ${isContextOnly}
