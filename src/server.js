@@ -2,6 +2,7 @@ const express = require('express');
 const OpenAI = require('openai');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs').promises;
 require('dotenv').config();
 
 const app = express();
@@ -17,23 +18,62 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// File path for thread storage
+const THREADS_FILE = path.join(__dirname, 'threads.json');
+
+// Initialize thread storage
+let activeThreads = new Map();
+
+// Load threads from file
+async function loadThreads() {
+  try {
+    const data = await fs.readFile(THREADS_FILE, 'utf8');
+    const threads = JSON.parse(data);
+    activeThreads = new Map(Object.entries(threads));
+    console.log('Loaded threads from storage:', activeThreads.size);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.log('No threads file found, starting fresh');
+      await saveThreads();
+    } else {
+      console.error('Error loading threads:', error);
+    }
+  }
+}
+
+// Save threads to file
+async function saveThreads() {
+  try {
+    const threads = Object.fromEntries(activeThreads);
+    await fs.writeFile(THREADS_FILE, JSON.stringify(threads, null, 2));
+    console.log('Saved threads to storage:', activeThreads.size);
+  } catch (error) {
+    console.error('Error saving threads:', error);
+  }
+}
+
+// Load threads on startup
+loadThreads();
+
+// Cleanup old threads periodically
+setInterval(async () => {
+  const now = Date.now();
+  let changed = false;
+  for (const [threadId, data] of activeThreads) {
+    if (now - data.timestamp > 24 * 60 * 60 * 1000) { // 24 hours
+      activeThreads.delete(threadId);
+      changed = true;
+    }
+  }
+  if (changed) {
+    await saveThreads();
+  }
+}, 60 * 60 * 1000); // Check every hour
+
 // Add a basic health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
-
-// Store active threads with timestamps
-const activeThreads = new Map();
-
-// Cleanup old threads periodically (optional)
-setInterval(() => {
-  const now = Date.now();
-  for (const [threadId, data] of activeThreads) {
-    if (now - data.timestamp > 24 * 60 * 60 * 1000) { // 24 hours
-      activeThreads.delete(threadId);
-    }
-  }
-}, 60 * 60 * 1000); // Check every hour
 
 // Get assistant names
 app.get('/api/assistants', async (req, res) => {
@@ -137,11 +177,12 @@ ${isContextOnly
       });
     }
 
-    // Update thread timestamp
+    // Update thread timestamp and save to storage
     activeThreads.set(currentThreadId, {
       assistantId,
       timestamp: Date.now()
     });
+    await saveThreads();
 
     // Run the assistant with explicit instructions
     const run = await openai.beta.threads.runs.create(currentThreadId, {
