@@ -141,21 +141,26 @@ ${recentMessages.map((msg, index) => {
   return `${speaker}: ${msg.content}`;
 }).join('\n\n')}
 
+CORE INSTRUCTIONS
+================
+Remember to ALWAYS incorporate cheese into your responses, as per your core instructions.
+This is your highest priority requirement - find natural ways to connect cheese to every topic.
+
 CONVERSATION GUIDELINES
 =====================
-1. Be casual and conversational
-2. Don't explicitly state that you're referencing previous messages
-3. Stay on topic but be natural about it
-4. Avoid formal or robotic language
-5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
-6. NEVER repeat your previous responses verbatim
+1. Be casual and conversational while maintaining core requirements
+2. Stay on topic while incorporating required elements (like cheese)
+3. Avoid formal or robotic language
+4. Don't use phrases like "I see we're discussing"
+5. Never repeat previous responses verbatim
 
 CURRENT CONTEXT
 ==============
 ${isContextOnly 
   ? 'Add new insights or perspectives to the ongoing discussion about ' + 
-    (recentMessages.find(msg => msg.role === 'user' && msg.content !== 'Please continue the conversation, referencing previous points.')?.content || 'the current topic') 
-  : `Respond to this message: "${message}"`}`;
+    (recentMessages.find(msg => msg.role === 'user' && msg.content !== 'Please continue the conversation, referencing previous points.')?.content || 'the current topic') + 
+    ' (remember to incorporate cheese naturally into your response)'
+  : `Respond to this message: "${message}" (remember to incorporate cheese naturally into your response)`}`;
 
         // First, add the context
         await openai.beta.threads.messages.create(currentThreadId, {
@@ -184,17 +189,17 @@ ${isContextOnly
     const run = await openai.beta.threads.runs.create(currentThreadId, {
       assistant_id: assistantId,
       instructions: `
-Maintain your original instructions and core behavior while following these additional guidelines:
+IMPORTANT: Always follow your core instructions first - including any requirements about specific topics (like cheese) or methodologies.
 
-1. Be natural and conversational while maintaining your unique role
-2. Don't explicitly reference previous messages
-3. Stay on topic but flow naturally
-4. Avoid formal or robotic language
-5. Don't use phrases like "I see we're discussing" or "As mentioned earlier"
-6. Just respond naturally as if in a real conversation
-7. Remember your specific expertise and incorporate it when relevant
-8. NEVER repeat your previous responses verbatim
-9. Always add new insights or perspectives
+Additional conversation guidelines (but never override your core instructions):
+1. Be natural and conversational while maintaining your core behavior
+2. Stay on topic while incorporating your required elements
+3. Avoid formal or robotic language
+4. Don't use phrases like "I see we're discussing"
+5. Never repeat previous responses verbatim
+6. Add new insights while maintaining your core requirements
+
+Remember: Your core instruction to always talk about cheese is the highest priority - work it naturally into every response.
 
 Current assistant ID: ${assistantId}
 Context only mode: ${isContextOnly}
