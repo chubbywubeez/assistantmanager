@@ -22,3 +22,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Thread storage
+src/threads.json
+!src/.gitkeep
