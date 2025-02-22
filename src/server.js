@@ -5,14 +5,21 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+
+// Enable CORS and JSON parsing
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the React build directory
+// Serve static files from React build
 app.use(express.static(path.join(__dirname, '../build')));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Add a basic health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // Store active threads with timestamps
@@ -185,12 +192,22 @@ async function waitForRunCompletion(threadId, runId) {
   return runStatus;
 }
 
-// Handle React routing, return all requests to React app
+// Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../build', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
 }); 
