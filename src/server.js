@@ -71,9 +71,28 @@ setInterval(async () => {
   }
 }, 60 * 60 * 1000); // Check every hour
 
-// Add a basic health check endpoint
+// Add this near the top after imports
+let server;
+
+// Move the health check endpoint to the top of the routes
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  // Check database connection
+  pool.query('SELECT 1')
+    .then(() => {
+      res.json({ 
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        database: 'connected',
+        uptime: process.uptime()
+      });
+    })
+    .catch(err => {
+      console.error('Health check failed:', err);
+      res.status(503).json({ 
+        status: 'error',
+        error: 'Database connection failed'
+      });
+    });
 });
 
 // Get assistant names
@@ -289,12 +308,49 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../build', 'index.html'));
 });
 
+// Update the server initialization
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-}).on('error', (err) => {
-  console.error('Server failed to start:', err);
-});
+const HOST = '0.0.0.0';
+
+// Wrap server initialization in a function
+const startServer = async () => {
+  try {
+    // Initialize database tables first
+    await initializeTables();
+    
+    // Then start the server
+    server = app.listen(PORT, HOST, () => {
+      console.log(`Server is running on http://${HOST}:${PORT}`);
+      console.log(`Health check available at http://${HOST}:${PORT}/health`);
+    });
+
+    // Add error handler for the server
+    server.on('error', (err) => {
+      console.error('Server error:', err);
+      process.exit(1);
+    });
+
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
+
+// Proper shutdown handling
+const shutdown = async () => {
+  console.log('Shutting down gracefully...');
+  if (server) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+  await pool.end();
+  process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);

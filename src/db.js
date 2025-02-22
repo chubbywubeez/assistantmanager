@@ -1,35 +1,55 @@
 const { Pool } = require('pg');
 
-// Initialize PostgreSQL pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Required for Railway's PostgreSQL
-  }
-});
+// Initialize PostgreSQL pool with retry logic
+const createPool = () => {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false // Required for Railway's PostgreSQL
+    }
+  });
 
-// Initialize tables
-async function initializeTables() {
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS liked_messages (
-        id SERIAL PRIMARY KEY,
-        message_content TEXT NOT NULL,
-        assistant_id TEXT NOT NULL,
-        assistant_name TEXT NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        context TEXT,
-        tags TEXT
-      );
-    `);
-  } finally {
-    client.release();
+  // Add error handler
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+    process.exit(-1);
+  });
+
+  return pool;
+};
+
+const pool = createPool();
+
+// Initialize tables with retry logic
+async function initializeTables(retries = 5, delay = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS liked_messages (
+            id SERIAL PRIMARY KEY,
+            message_content TEXT NOT NULL,
+            assistant_id TEXT NOT NULL,
+            assistant_name TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            context TEXT,
+            tags TEXT
+          );
+        `);
+        console.log('Database tables initialized successfully');
+        return true;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error(`Failed to initialize tables (attempt ${i + 1}/${retries}):`, err);
+      if (i === retries - 1) throw err;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
+  return false;
 }
-
-// Initialize tables on startup
-initializeTables().catch(console.error);
 
 // Function to like a message
 async function likeMessage(message, assistantId, assistantName, context = null, tags = []) {
@@ -131,6 +151,8 @@ async function deleteLikedMessage(id) {
 }
 
 module.exports = {
+  pool,
+  initializeTables,
   likeMessage,
   getLikedMessages,
   getLikedMessagesByAssistant,
